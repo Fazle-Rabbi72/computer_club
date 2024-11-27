@@ -59,7 +59,7 @@ class CandidateViewSet(viewsets.ModelViewSet):
                     # Image URL
                     image_url = None
                     if candidate.user.image:
-                        image_url = f"{settings.MEDIA_URL}{candidate.user.image.name}"
+                        image_url = request.build_absolute_uri(candidate.user.image.url)
 
                     candidates_data.append({
                         "full_name": f"{candidate.user.first_name} {candidate.user.last_name}",
