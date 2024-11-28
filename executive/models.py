@@ -1,6 +1,9 @@
 from django.db import models
 
 # Create your models here.
+from django.db import models
+
+
 class Executive(models.Model):
     DESIGNATION_CHOICES = [
         ('President', 'President'),
@@ -20,7 +23,7 @@ class Executive(models.Model):
         ('Research Lead', 'Research and Innovation Lead'),
         ('Alumni Coordinator', 'Alumni Coordinator'),
     ]
-
+    
     name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
