@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes,force_str
 from rest_framework.response import Response
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout,get_user_model
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework.permissions import IsAuthenticated
@@ -19,6 +19,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import update_last_login
+from django.core.exceptions import ValidationError
+
 
 from django.core.mail import send_mail
 
@@ -124,58 +126,77 @@ class ChangePasswordView(APIView):
 
 
 
-class ForgotPasswordView(APIView):
-    def post(self, request):
-        email = request.data.get('email')
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
+# class ForgotPasswordView(APIView):
+#     def post(self, request):
+#         email = request.data.get('email')
+#         try:
+#             user = User.objects.get(email=email)
+#         except User.DoesNotExist:
+#             return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Generate token and UID
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
+#         # Generate token and UID
+#         token = default_token_generator.make_token(user)
+#         uid = urlsafe_base64_encode(force_bytes(user.pk))
 
-        # Create reset link
-        reset_link = f"https://computer-club.onrender.com/reset-password/{uid}/{token}/"
+#         # Create reset link
+#         reset_link = f"https://computer-club.onrender.com/reset-password/{uid}/{token}/"
 
-        # Send reset email
-        send_mail(
-            "Password Reset Request",
-            f"Hi {user.username},\nUse the link below to reset your password:\n{reset_link}",
-            "noreply@yourdomain.com",
-            [email],
-            fail_silently=False,
-        )
+#         # Send reset email
+#         send_mail(
+#             "Password Reset Request",
+#             '',
+#             'noreply@yourdomain.com',
+#             [email],
+#             fail_silently=False,
+#             html_message=render_to_string('forgot_password.html', {"user": user, "reset_link": reset_link})
+#         )
 
-        return Response({"success": "Password reset email sent."}, status=status.HTTP_200_OK)
+#         return Response({"success": "Password reset email sent."}, status=status.HTTP_200_OK)
 
-class ResetPasswordView(APIView):
-    def post(self, request, uidb64, token):
-        try:
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({"error": "Invalid link."}, status=status.HTTP_400_BAD_REQUEST)
+# class ResetPasswordView(APIView):
+#     def get(self, request, uidb64, token):
+#         try:
+#             # Decode user ID from base64
+#             uid = force_str(urlsafe_base64_decode(uidb64))
+#             user = get_user_model().objects.get(pk=uid)
+#         except (TypeError, ValueError, OverflowError, get_user_model().DoesNotExist):
+#             return Response({"error": "Invalid link."}, status=400)
 
-        # Verify the token
-        if not default_token_generator.check_token(user, token):
-            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+#         # Check if the token is valid
+#         if not default_token_generator.check_token(user, token):
+#             return Response({"error": "Invalid or expired token."}, status=400)
 
-        # Get new password
-        new_password = request.data.get('new_password')
-        confirm_password = request.data.get('confirm_password')
+#         # Render the reset password form
+#         return render(request, 'reset_password.html', {'uidb64': uidb64, 'token': token})
 
-        if new_password != confirm_password:
-            return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+#     def post(self, request, uidb64, token):
+#         try:
+#             # Decode user ID from base64
+#             uid = force_str(urlsafe_base64_decode(uidb64))
+#             user = get_user_model().objects.get(pk=uid)
+#         except (TypeError, ValueError, OverflowError, get_user_model().DoesNotExist):
+#             return Response({"error": "Invalid link."}, status=400)
 
-        # Validate and set new password
-        try:
-            validate_password(new_password, user)
-        except Exception as e:
-            return Response({"error": e.messages}, status=status.HTTP_400_BAD_REQUEST)
+#         # Check if the token is valid
+#         if not default_token_generator.check_token(user, token):
+#             return Response({"error": "Invalid or expired token."}, status=400)
 
-        user.set_password(new_password)
-        user.save()
+#         # Get new password from the request
+#         new_password = request.data.get('new_password')
+#         confirm_password = request.data.get('confirm_password')
 
-        return Response({"success": "Password reset successfully."}, status=status.HTTP_200_OK)
+#         # Ensure passwords match
+#         if new_password != confirm_password:
+#             return Response({"error": "Passwords do not match."}, status=400)
+
+#         # Validate the new password
+#         try:
+#             validate_password(new_password, user)
+#         except ValidationError as e:
+#             return Response({"error": e.messages}, status=400)
+
+#         # Set and save the new password
+#         user.set_password(new_password)
+#         user.save()
+
+#         return Response({"success": "Password reset successfully."}, status=200)
