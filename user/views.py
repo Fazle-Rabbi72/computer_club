@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from rest_framework import viewsets, status
 from .models import User
-from .serializers import UserSerializer, RegistrationSerializer, UserLoginSerializer
+from .serializers import UserSerializer, RegistrationSerializer, UserLoginSerializer, ChangePasswordSerializer
 from rest_framework.views import APIView
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes,force_str
@@ -21,6 +21,7 @@ from rest_framework.response import Response
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.models import update_last_login
 from django.core.exceptions import ValidationError
+
 
 
 from django.core.mail import send_mail
@@ -99,40 +100,27 @@ class LogoutAPIView(APIView):
 
 
 class ChangePasswordView(APIView):
-    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
-
     def post(self, request):
-        user = request.user
-        old_password = request.data.get('old_password')
-        new_password = request.data.get('new_password')
-        confirm_password = request.data.get('confirm_password')
+        serializer = ChangePasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            user = request.user
+            old_password = serializer.validated_data.get('old_password')
+            new_password = serializer.validated_data.get('new_password')
+            confirm_password=serializer.validated_data.get('confirm_password')
 
-        # Check if old password is correct
-        if not user.check_password(old_password):
-            return Response({"error": "Old password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+            if not user.check_password(old_password):
+                return Response({"error": "Old password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check if new passwords match
-        if new_password != confirm_password:
-            return Response({"error": "New passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+            if new_password != confirm_password:
+                return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate new password
-        try:
-            validate_password(new_password, user)
-        except Exception as e:
-            return Response({"error": e.messages}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Set new password
-        user.set_password(new_password)
-        user.save()
-
-        # Update last login (optional)
-        update_last_login(None, user)
-
-        return Response({"success": "Password changed successfully."}, status=status.HTTP_200_OK)
-
-
-
+            user.set_password(new_password)
+            user.save()
+            return Response({"success": "Password changed successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 # class ForgotPasswordView(APIView):
 #     def post(self, request):
 #         email = request.data.get('email')
