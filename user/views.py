@@ -77,6 +77,11 @@ class UserLoginApiView(APIView):
             password = serializer.validated_data.get('password')
             user = authenticate(username=username, password=password)
             if user:
+                if not user.is_active:
+                    return Response({"error": "User is not active."}, status=status.HTTP_401_UNAUTHORIZED)
+                if user.status == 'Pending':
+                    return Response({"error": "User is not approved yet."}, status=status.HTTP_401_UNAUTHORIZED)
+                
                 token, _ = Token.objects.get_or_create(user=user)
                 login(request, user)
                 return Response({'token': token.key, 'user_id': user.id, 'username': user.username}, status=status.HTTP_200_OK)
