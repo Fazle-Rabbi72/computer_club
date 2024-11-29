@@ -10,6 +10,7 @@ from django.contrib.auth import authenticate, login, logout,get_user_model
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.tokens import default_token_generator
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
 from django.http import JsonResponse
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -98,6 +99,7 @@ class LogoutAPIView(APIView):
 
 
 class ChangePasswordView(APIView):
+    authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
